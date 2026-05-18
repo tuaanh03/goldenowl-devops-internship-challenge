@@ -1,0 +1,64 @@
+name: CD - Build, Push and Update K8s Manifest
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    name: Build, Push and Update K8s
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Git tag
+        id: vars
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ env.TAG_NAME }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:latest
+
+      - name: Checkout k8s-manifests branch
+        uses: actions/checkout@v4
+        with:
+          ref: k8s-manifests
+          path: k8s-infra
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Update frontend image in manifest
+        run: |
+          cd k8s-infra
+          # Cập nhật đường dẫn 'apps/ecommerce/stack.yaml' phù hợp với cấu trúc repo manifest của bạn sau này
+          yq -i '
+            select(.kind == "Deployment" and .metadata.name == "ecommerce-frontend-deployment")
+            .spec.template.spec.containers[0].image = "${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ env.TAG_NAME }}"
+          ' apps/ecommerce/stack.yaml
+
+      - name: Commit and push manifest
+        run: |
+          cd k8s-infra
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Update frontend image to ${{ env.TAG_NAME }}" || echo "No changes to commit"
+          git push
