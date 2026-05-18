@@ -5,6 +5,15 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
+env:
+  IMAGE_NAME: goldenowl-devops-internship-challenge
+  MANIFEST_BRANCH: k8s-manifests
+  MANIFEST_FILE: k8s-infrastructure/apps/goldenowl-devops-internship-challenge/stack.yaml
+  DEPLOYMENT_NAME: goldenowl-devops-internship-challenge-deployment
+
 jobs:
   deploy:
     name: Build, Push and Update K8s
@@ -21,23 +30,22 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Git tag
-        id: vars
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_ENV"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./src
+          file: ./src/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ env.TAG_NAME }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG_NAME }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Checkout k8s-manifests branch
         uses: actions/checkout@v4
         with:
-          ref: k8s-manifests
+          ref: ${{ env.MANIFEST_BRANCH }}
           path: k8s-infra
 
       - name: Install yq
@@ -45,20 +53,20 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Update frontend image in manifest
+      - name: Update application image in manifest
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG_NAME }}
         run: |
           cd k8s-infra
-          # Cập nhật đường dẫn 'apps/ecommerce/stack.yaml' phù hợp với cấu trúc repo manifest của bạn sau này
           yq -i '
-            select(.kind == "Deployment" and .metadata.name == "ecommerce-frontend-deployment")
-            .spec.template.spec.containers[0].image = "${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-frontend:${{ env.TAG_NAME }}"
-          ' apps/ecommerce/stack.yaml
+            (. | select(.kind == "Deployment" and .metadata.name == strenv(DEPLOYMENT_NAME)) | .spec.template.spec.containers[0].image) = strenv(IMAGE)
+          ' "${{ env.MANIFEST_FILE }}"
 
       - name: Commit and push manifest
         run: |
           cd k8s-infra
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "Update frontend image to ${{ env.TAG_NAME }}" || echo "No changes to commit"
-          git push
+          git add "${{ env.MANIFEST_FILE }}"
+          git commit -m "chore: update image to ${{ env.TAG_NAME }}" || echo "No changes to commit"
+          git push origin HEAD:${{ env.MANIFEST_BRANCH }}

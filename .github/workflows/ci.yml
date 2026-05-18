@@ -3,10 +3,11 @@ name: CI - Test Application
 on:
   pull_request:
     branches:
-      - main
+      - master
       - develop
   push:
     branches:
+      - master
       - 'feature/*'
 
 jobs:
@@ -23,9 +24,12 @@ jobs:
         with:
           node-version: '18' 
           cache: 'npm'
+          cache-dependency-path: src/package-lock.json
 
       - name: Install dependencies
+        working-directory: ./src
         run: npm ci
 
       - name: Run tests
+        working-directory: ./src
         run: npm test 
