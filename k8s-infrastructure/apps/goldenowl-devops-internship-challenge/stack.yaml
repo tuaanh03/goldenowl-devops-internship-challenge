@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: goldenowl-devops-internship-challenge
-          image: mukuzro/goldenowl-devops-internship-challenge:latest
+          image: mukuzro/goldenowl-devops-internship-challenge:v20260518-0
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
