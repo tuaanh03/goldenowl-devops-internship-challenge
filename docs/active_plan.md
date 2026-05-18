@@ -39,21 +39,16 @@
 
 ---
 
-## GIAI ĐOẠN 3: CHUẨN BỊ HẠ TẦNG GOOGLE CLOUD (GCP)
-**Mục tiêu:** Tạo sẵn "sân chơi" để pipeline có thể đẩy code lên. (Bước này làm trên Console của GCP).
+## GIAI ĐOẠN 3: CHUẨN BỊ HẠ TẦNG DOCKER HUB VÀ GOOGLE CLOUD (GCP)
 
 ### Thiết lập Registry (Docker Hub):
-- Tạo một repository trên Docker Hub để lưu trữ Docker images (Khuyến nghị để Public cho dễ pull).
+- Tạo một repository trên Docker Hub để lưu trữ Docker images ở chế độ **Public**. (Điều này đảm bảo khi GKE đọc file YAML Deployment, nó có thể pull image thoải mái mà **không cần thiết lập IAM phức tạp** hay cấu hình `imagePullSecrets`).
 - Tạo Access Token trên Docker Hub để cấp quyền cho GitHub Actions.
 
 ### Thiết lập Kubernetes:
 - Tạo cụm GKE (hoặc sử dụng cụm bạn đã có).
-- Kiểm tra/Cài đặt NGINX Ingress Controller trên cụm GKE.
-
-### Thiết lập Bảo mật & Phân quyền (GCP IAM):
-- Tạo một Service Account chuyên dụng cho GitHub Actions.
-- Chỉ cấp quyền cần thiết (Principle of Least Privilege): Quyền kết nối và triển khai (Deploy) lên cụm GKE (ví dụ role: `Kubernetes Engine Developer`).
-- Xuất file Key (JSON) của Service Account này.
+- Cài đặt NGINX Ingress Controller trên cụm GKE.
+- **Cài đặt GitOps Agent (ví dụ: Argo CD):** Cài đặt Argo CD vào cụm GKE và cấu hình nó để theo dõi repository chứa mã nguồn (hoặc một repository riêng cho manifests).
 
 ---
 
@@ -63,14 +58,14 @@
 **Chuyển nhánh làm việc:** Tạo nhánh mới (VD: `git checkout -b feature/k8s-manifests`).
 
 ### Thiết kế các Component:
-- **Deployment:** Khai báo số lượng Pod (chạy tối thiểu 2 để đảm bảo sẵn sàng cao), khai báo giới hạn tài nguyên (CPU/RAM).
+- **Deployment:** Khai báo số lượng Pod (chạy tối thiểu 2 để đảm bảo sẵn sàng cao), khai báo giới hạn tài nguyên. Chỉ định thẳng tên image Public từ Docker Hub.
 - **Service:** Khai báo ClusterIP để các Pod giao tiếp nội bộ.
 - **Ingress:** Cấu hình luật định tuyến để Nginx Ingress nhận traffic từ ngoài và đẩy vào Service nội bộ.
 - **HPA (Auto Scaling):** Cấu hình tự động tăng số lượng Pod khi CPU tăng cao.
 
 ### Kiểm thử thủ công (Manual Test):
-- Tự build và push 1 image lên Docker Hub bằng tay.
-- Dùng lệnh `kubectl apply` để triển khai thử các file này lên GKE xem hệ thống có chạy thông suốt từ Ingress vào đến Pod không.
+- Commit các file manifest vào repository.
+- Truy cập giao diện của Argo CD để xem nó có tự động phát hiện và đồng bộ (sync) ứng dụng lên GKE thành công hay không.
 
 ### Commit Code:
 - `"feat: add Kubernetes manifests for deployment, service, ingress, and HPA"`.
@@ -81,7 +76,9 @@
 **Mục tiêu:** Tự động hóa toàn bộ quy trình.
 
 ### Bảo mật thông tin:
-- Đưa các thông tin nhạy cảm (`Project ID`, `Service Account Key`, `Cluster Name`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`) vào mục Settings > Secrets của GitHub.
+- Đưa các thông tin nhạy cảm vào mục **Settings > Secrets and variables > Actions** của GitHub. Với mô hình GitOps, chúng ta chỉ cần:
+  - `DOCKERHUB_USERNAME`: Tên đăng nhập Docker Hub.
+  - `DOCKERHUB_TOKEN`: Access Token của Docker Hub.
 
 ### Xây dựng luồng CI (Continuous Integration):
 - Tạo file workflow chạy khi có mã mới đẩy lên các nhánh `feature/*`.
@@ -90,7 +87,7 @@
 
 ### Xây dựng luồng CD (Continuous Deployment):
 - Tạo file workflow chạy khi mã được hợp nhất (merge) vào `main`/`master`.
-- **Quy trình:** Đăng nhập Docker Hub -> Build Docker Image (gắn tag là Git SHA) -> Push lên Docker Hub -> Xác thực với GCP -> Kết nối cụm GKE -> Cập nhật tag image mới vào K8s -> Apply cấu hình.
+- **Quy trình:** Đăng nhập Docker Hub -> Build & Push Docker Image (gắn tag là Git SHA) -> Checkout code -> Dùng công cụ (sed/yq) để cập nhật tag image mới vào file `deployment.yaml` -> Commit và push thay đổi vào `main`.
 - **Commit Code:** `"cd: add automated deployment pipeline to GKE"`.
 
 ---
