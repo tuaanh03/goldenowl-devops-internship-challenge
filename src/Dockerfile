@@ -9,7 +9,7 @@ RUN npm install --omit=dev
 # Stage 2: Production Runtime (Môi trường chạy thực tế)
 FROM node:18-alpine
 
-RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
+RUN mkdir -p /home/node/app/node_modules /app/config && chown -R node:node /home/node/app /app/config
 WORKDIR /home/node/app
 
 COPY --chown=node:node package*.json ./
@@ -19,5 +19,7 @@ USER node
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 
+ENV DOTENV_CONFIG_PATH=/app/config/.env
+
 EXPOSE 3000
-CMD [ "node", "index.js" ]
+CMD [ "node", "-r", "dotenv/config", "index.js" ]
