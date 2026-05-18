@@ -7,7 +7,7 @@ metadata:
   labels:
     app: goldenowl-devops-internship-challenge
 spec:
-  replicas: 3
+  replicas: 2
   revisionHistoryLimit: 11
   selector:
     matchLabels:
