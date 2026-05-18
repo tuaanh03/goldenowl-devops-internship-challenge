@@ -8,7 +8,7 @@ spec:
 
   source:
     repoURL: https://github.com/tuaanh03/goldenowl-devops-internship-challenge.git
-    targetRevision: feature/k8s-manifest
+    targetRevision: k8s-manifests
     path: k8s-infrastructure/apps/goldenowl-devops-internship-challenge
 
   destination:
