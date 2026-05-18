@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: goldenowl-devops-internship-challenge
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/tuaanh03/goldenowl-devops-internship-challenge.git
+    targetRevision: feature/k8s-manifest
+    path: k8s-infrastructure/apps/goldenowl-devops-internship-challenge
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: goldenowl-devops-internship-challenge
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    name: goldenowl-devops-internship-challenge-deployment
+    namespace: goldenowl-devops-internship-challenge
+    jsonPointers:
+      - /spec/replicas

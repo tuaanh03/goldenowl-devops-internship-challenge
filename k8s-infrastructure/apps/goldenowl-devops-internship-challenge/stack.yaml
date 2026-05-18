@@ -1,0 +1,120 @@
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goldenowl-devops-internship-challenge-deployment
+  namespace: goldenowl-devops-internship-challenge
+  labels:
+    app: goldenowl-devops-internship-challenge
+spec:
+  replicas: 3
+  revisionHistoryLimit: 11
+  selector:
+    matchLabels:
+      app: goldenowl-devops-internship-challenge
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: goldenowl-devops-internship-challenge
+    spec:
+      containers:
+        - name: goldenowl-devops-internship-challenge
+          image: mukuzro/goldenowl-devops-internship-challenge:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          volumeMounts:
+            - name: application-config-map-volume
+              mountPath: /app/config/.env
+              subPath: .env
+      volumes:
+        - name: application-config-map-volume
+          configMap:
+            name: goldenowl-env-configmap
+            defaultMode: 420
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: goldenowl-devops-internship-challenge-service
+  namespace: goldenowl-devops-internship-challenge
+spec:
+  type: ClusterIP
+  selector:
+    app: goldenowl-devops-internship-challenge
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goldenowl-devops-internship-challenge-ingress
+  namespace: goldenowl-devops-internship-challenge
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: goldenowl.app-store.codes
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: goldenowl-devops-internship-challenge-service
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - goldenowl.app-store.codes
+      secretName: goldenowl-tls
+---
+# ConfigMap .env
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goldenowl-env-configmap
+  namespace: goldenowl-devops-internship-challenge
+data:
+  .env: |
+    NODE_ENV=production
+    PORT=3000
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: goldenowl-devops-internship-challenge-scaling
+  namespace: goldenowl-devops-internship-challenge
+spec:
+  minReplicas: 2
+  maxReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: goldenowl-devops-internship-challenge-deployment
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
