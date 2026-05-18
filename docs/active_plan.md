@@ -93,7 +93,7 @@
 ---
 
 ## GIAI ĐOẠN 6: TÍCH HỢP, KIỂM THỬ TOÀN DIỆN & LÀM TÀI LIỆU (QUAN TRỌNG NHẤT)
-**Mục tiêu:** Chứng minh kết quả và ghi điểm với nhà tuyển dụng qua tài liệu.
+**Mục tiêu:** Chứng minh kết quả và quá trình thực hiện qua tài liệu.
 
 ### Kích hoạt Pipeline:
 - Tạo Pull Request (PR) từ nhánh feature vào main.
