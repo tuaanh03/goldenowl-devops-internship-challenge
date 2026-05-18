@@ -105,8 +105,8 @@ metadata:
   name: goldenowl-devops-internship-challenge-scaling
   namespace: goldenowl-devops-internship-challenge
 spec:
-  minReplicas: 2
-  maxReplicas: 3
+  minReplicas: 1
+  maxReplicas: 2
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
