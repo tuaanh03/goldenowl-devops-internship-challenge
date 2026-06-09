@@ -7,7 +7,7 @@ metadata:
   labels:
     app: goldenowl-devops-internship-challenge
 spec:
-  replicas: 2
+  replicas: 3
   revisionHistoryLimit: 11
   selector:
     matchLabels:
@@ -105,8 +105,8 @@ metadata:
   name: goldenowl-devops-internship-challenge-scaling
   namespace: goldenowl-devops-internship-challenge
 spec:
-  minReplicas: 1
-  maxReplicas: 2
+  minReplicas: 2
+  maxReplicas: 3
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
